@@ -24,13 +24,18 @@ export interface HealthLinkEndpoint {
 export interface HealthLinkConfig {
   passcode?: string;
   exp?: number;
+  userId?: string;
+  sessionId?: string;
 }
 
 export interface HealthLink {
   config: HealthLinkConfig;
   active: boolean;
   id: string;
-  managementToken: string;
+  userId?: string;
+  sessionId?: string;
+  created: string;
+  managementToken?: string;
   passcodeFailuresRemaining: number;
 }
 

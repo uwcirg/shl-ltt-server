@@ -38,33 +38,42 @@ async function updateAccessToken(endpoint: types.HealthLinkEndpoint) {
 
 export const DbLinks = {
   create(config: types.HealthLinkConfig) {
+    let { userId, sessionId, ...configSansUserAndSession } = config;
+
     const link = {
-      config,
+      config: configSansUserAndSession,
       id: randomStringWithEntropy(32),
+      userId: userId,
+      sessionId: sessionId,
       managementToken: randomStringWithEntropy(32),
+      created: new Date().getTime() / 1000,
       active: true,
     };
     db.query(
-      `INSERT INTO shlink (id, management_token, active, config_exp, config_passcode)
-      values (:id, :managementToken, :active, :exp, :passcode)`,
+      `INSERT INTO shlink (id, user_id, session_id, management_token, active, created, config_exp, config_passcode)
+      values (:id, :userId, :sessionId, :managementToken, :active, :created, :exp, :passcode)`,
       {
         id: link.id,
+        userId: link.userId,
+        sessionId: link.sessionId,
         managementToken: link.managementToken,
         active: link.active,
+        created: link.created,
         exp: link.config.exp,
         passcode: link.config.passcode,
-      },
+      }
     );
 
     return link;
   },
-  updateConfig(shl: types.HealthLink) {
-    db.query(`UPDATE shlink set config_passcode=:passcode, config_exp=:exp where id=:id`,
+  updateConfig(linkId:string, config: types.HealthLinkConfig) {
+    db.query(`UPDATE shlink set config_passcode=:passcode, config_exp=:exp, session_id=:sessionId where id=:id`,
     {
-      id: shl.id,
-      exp: shl.config.exp,
-      passcode: shl.config.passcode
-    })
+      id: linkId,
+      exp: config.exp,
+      passcode: config.passcode,
+      sessionId: config.sessionId
+    });
     return true;
   },
   deactivate(shl: types.HealthLink) {
@@ -83,6 +92,9 @@ export const DbLinks = {
       id: linkRow.id as string,
       passcodeFailuresRemaining: linkRow.passcode_failures_remaining as number,
       active: Boolean(linkRow.active) as boolean,
+      userId: linkRow.user_id as string,
+      sessionId: linkRow.session_id as string,
+      created: linkRow.created as string,
       managementToken: linkRow.management_token as string,
       config: {
         exp: linkRow.config_exp as number,
@@ -90,12 +102,38 @@ export const DbLinks = {
       },
     };
   },
+  getUserShl(userId: string): types.HealthLink | undefined {
+    try {
+      const linkRow = db
+        .prepareQuery(`SELECT * from shlink where user_id=? and active=1 order by created desc limit 1`)
+        .oneEntry([userId]);
+      return {
+        id: linkRow.id as string,
+        passcodeFailuresRemaining: linkRow.passcode_failures_remaining as number,
+        active: Boolean(linkRow.active) as boolean,
+        userId: linkRow.user_id as string,
+        sessionId: linkRow.session_id as string,
+        created: linkRow.created as string,
+        managementToken: linkRow.management_token as string,
+        config: {
+          exp: linkRow.config_exp as number,
+          passcode: linkRow.config_passcode as string,
+        },
+      };
+    } catch (e) {
+      console.warn(e);
+      return undefined;
+    }
+  },
   getShlInternal(linkId: string): types.HealthLink {
     const linkRow = db.prepareQuery(`SELECT * from shlink where id=?`).oneEntry([linkId]);
     return {
       id: linkRow.id as string,
       passcodeFailuresRemaining: linkRow.passcode_failures_remaining as number,
       active: Boolean(linkRow.active) as boolean,
+      userId: linkRow.user_id as string,
+      sessionId: linkRow.session_id as string,
+      created: linkRow.created as string,
       managementToken: linkRow.management_token as string,
       config: {
         exp: linkRow.config_exp as number,
@@ -139,6 +177,17 @@ export const DbLinks = {
     //   hashEncoded,
     //   content: file.content,
     // });
+
+    return true;
+  },
+  async deleteAllFiles(linkId: string) {
+
+    db.query(
+      `delete from shlink_file where shlink = :linkId`,
+      {
+        linkId
+      }
+    );
 
     return true;
   },

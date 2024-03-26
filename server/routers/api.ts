@@ -83,12 +83,26 @@ export const shlApiRouter = new oak.Router()
   })
   .put('/shl/:shlId', async (context) => {
     const managementToken = await context.request.headers.get('authorization')?.split(/bearer /i)[1]!;
+    const config = await context.request.body({ type: 'json' }).value;
     const shl = db.DbLinks.getManagedShl(context.params.shlId, managementToken)!;
     if (!shl) {
       throw new Error(`Can't manage SHLink ` + context.params.shlId);
     }
-    const updated = db.DbLinks.updateConfig(shl);
-    context.response.body = updated;
+    const updated = db.DbLinks.updateConfig(context.params.shlId, config);
+    if (!updated) {
+      return (context.response.status = 500);
+    }
+    const updatedShl = db.DbLinks.getManagedShl(context.params.shlId, managementToken);
+    delete updatedShl.managementToken
+    context.response.body = updatedShl;
+  })
+  .get('/user/:userId', async (context) => {
+    const shl = db.DbLinks.getUserShl(context.params.userId)!;
+    if (!shl) {
+      console.log(`Can't find SHLink for user ` + context.params.userId);
+      return;
+    }
+    context.response.body = shl;
   })
   .get('/shl/:shlId/file/:fileIndex', (context) => {
     const ticket = manifestAccessTickets.get(context.request.url.searchParams.get('ticket')!);
@@ -151,6 +165,21 @@ export const shlApiRouter = new oak.Router()
       ...shl,
       added,
     };
+  })
+  .delete('/shl/:shlId/file/all', async (context) => {
+    const managementToken = await context.request.headers.get('authorization')?.split(/bearer /i)[1]!;
+    const currentFileBody = await context.request.body({type: 'bytes'});
+
+    const shl = db.DbLinks.getManagedShl(context.params.shlId, managementToken);
+    if (!shl) {
+      throw new Error(`Can't manage SHLink ` + context.params.shlId);
+    }
+
+    const deleted = db.DbLinks.deleteAllFiles(shl.id);
+    context.response.body = {
+      ...shl,
+      deleted,
+    }
   })
   .delete('/shl/:shlId/file', async (context) => {
     const managementToken = await context.request.headers.get('authorization')?.split(/bearer /i)[1]!;
