@@ -28,6 +28,7 @@ export const shlApiRouter = new oak.Router()
   .post('/shl', async (context) => {
     const config: types.HealthLinkConfig = await context.request.body({ type: 'json' }).value;
     const newLink = db.DbLinks.create(config);
+    console.log("Created link " + newLink.id);
     context.response.body = {
       ...newLink,
       files: undefined,
@@ -41,18 +42,37 @@ export const shlApiRouter = new oak.Router()
     let shl: types.HealthLink;
     try {
       shl = db.DbLinks.getShlInternal(context.params.shlId);
-      if (!shl?.active) {
-        throw 'Cannot resolve manifest; no active SHL exists';
-      }
-      if (shl.config.passcode && shl.config.passcode !== config.passcode) {
-        db.DbLinks.recordPasscodeFailure(shl.id);
-        context.response.status = 401;
-        context.response.body = { remainingAttempts: shl.passcodeFailuresRemaining - 1 };
-        return;
-      }
     } catch {
-        context.response.status = 404;
-        return;
+      context.response.status = 404;
+      context.response.body = { message: "SHL does not exist or has been deactivated."};
+      context.response.headers.set('content-type', 'application/json');
+      return;
+    }
+
+    if (!shl?.active) {
+      context.response.status = 404;
+      context.response.body = { message: "SHL does not exist or has been deactivated." };
+      context.response.headers.set('content-type', 'application/json');
+      return;
+    }
+    if (shl.config.passcode && !("passcode" in config)) {
+      context.response.status = 401;
+      context.response.body = {
+        message: "Password required",
+        remainingAttempts: shl.passcodeFailuresRemaining
+      }
+      context.response.headers.set('content-type', 'application/json');
+      return;
+    }
+    if (shl.config.passcode && shl.config.passcode !== config.passcode) {
+      db.DbLinks.recordPasscodeFailure(shl.id);
+      context.response.status = 401;
+      context.response.body = {
+        message: "Incorrect password",
+        remainingAttempts: shl.passcodeFailuresRemaining - 1
+      };
+      context.response.headers.set('content-type', 'application/json');
+      return;
     }
 
     const ticket = randomStringWithEntropy(32);
@@ -80,21 +100,55 @@ export const shlApiRouter = new oak.Router()
           })),
         ),
     };
+    context.response.headers.set('content-type', 'application/json');
   })
   .put('/shl/:shlId', async (context) => {
     const managementToken = await context.request.headers.get('authorization')?.split(/bearer /i)[1]!;
     const config = await context.request.body({ type: 'json' }).value;
+    if (!db.DbLinks.linkExists(context.params.shlId)) {
+      context.response.status = 404;
+      context.response.body = { message: "SHL does not exist or has been deactivated." };
+      context.response.headers.set('content-type', 'application/json');
+      return;
+    }
     const shl = db.DbLinks.getManagedShl(context.params.shlId, managementToken)!;
     if (!shl) {
-      throw new Error(`Can't manage SHLink ` + context.params.shlId);
+      context.response.status = 401;
+      context.response.body = { message: `Unauthorized` };
+      context.response.headers.set('content-type', 'application/json');
+      return;
     }
-    const updated = db.DbLinks.updateConfig(context.params.shlId, config);
+    shl.config.exp = config.exp ?? shl.config.exp;
+    shl.config.passcode = config.passcode ?? shl.config.passcode;
+    const updated = db.DbLinks.updateConfig(context.params.shlId, config)!;
     if (!updated) {
       return (context.response.status = 500);
     }
-    const updatedShl = db.DbLinks.getManagedShl(context.params.shlId, managementToken);
-    delete updatedShl.managementToken
+    const updatedShl = db.DbLinks.getManagedShl(context.params.shlId, managementToken)!;
+    delete updatedShl.managementToken;
     context.response.body = updatedShl;
+    context.response.headers.set('content-type', 'application/json');
+  })
+  .get('/shl/:shlId/active', (context) => {
+    const shl = db.DbLinks.getShlInternal(context.params.shlId);
+    if (!shl) {
+      context.response.status = 404;
+      context.response.body = { message: `Deleted` };
+      context.response.headers.set('content-type', 'application/json');
+      return;
+    }
+    const isActive = (shl && shl.active);
+    console.log(context.params.shlId + " active: " + isActive);
+    context.response.body = isActive;
+    context.response.headers.set('content-type', 'application/json');
+    return;
+  })
+  .put('/shl/:shlId/reactivate', async (context) => {
+    const managementToken = await context.request.headers.get('authorization')?.split(/bearer /i)[1]!;
+    const success = db.DbLinks.reactivate(context.params.shlId, managementToken)!;
+    console.log("Reactivated " + context.params.shlId + ": " + success);
+    context.response.headers.set('content-type', 'application/json');
+    return (context.response.body = success);
   })
   .get('/user/:userId', async (context) => {
     const shl = db.DbLinks.getUserShl(context.params.userId)!;
@@ -108,12 +162,18 @@ export const shlApiRouter = new oak.Router()
     const ticket = manifestAccessTickets.get(context.request.url.searchParams.get('ticket')!);
     if (!ticket) {
       console.log('Cannot request SHL without a valid ticket');
-      return (context.response.status = 401);
+      context.response.status = 401;
+      context.response.body = { message: "Unauthorized" }
+      context.response.headers.set('content-type', 'application/json');
+      return;
     }
 
     if (ticket.shlId !== context.params.shlId) {
       console.log('Ticket is not valid for ' + context.params.shlId);
-      return (context.response.status = 401);
+      context.response.status = 401;
+      context.response.body = { message: "Unauthorized" }
+      context.response.headers.set('content-type', 'application/json');
+      return;
     }
 
     const file = db.DbLinks.getFile(context.params.shlId, context.params.fileIndex);
@@ -124,12 +184,18 @@ export const shlApiRouter = new oak.Router()
     const ticket = manifestAccessTickets.get(context.request.url.searchParams.get('ticket')!);
     if (!ticket) {
       console.log('Cannot request SHL without a valid ticket');
-      return (context.response.status = 401);
+      context.response.status = 401;
+      context.response.body = { message: "Unauthorized" }
+      context.response.headers.set('content-type', 'application/json');
+      return;
     }
 
     if (ticket.shlId !== context.params.shlId) {
       console.log('Ticket is not valid for ' + context.params.shlId);
-      return (context.response.status = 401);
+      context.response.status = 401;
+      context.response.body = { message: "Unauthorized" };
+      context.response.headers.set('content-type', 'application/json');
+      return;
     }
 
     const endpoint = await db.DbLinks.getEndpoint(context.params.shlId, context.params.endpointId);
@@ -150,9 +216,18 @@ export const shlApiRouter = new oak.Router()
     const managementToken = await context.request.headers.get('authorization')?.split(/bearer /i)[1]!;
     const newFileBody = await context.request.body({ type: 'bytes' });
 
+    if (!db.DbLinks.linkExists(context.params.shlId)) {
+      context.response.status = 404;
+      context.response.body = { message: "SHL does not exist or has been deactivated." };
+      context.response.headers.set('content-type', 'application/json');
+      return;
+    }
     const shl = db.DbLinks.getManagedShl(context.params.shlId, managementToken)!;
     if (!shl) {
-      throw new Error(`Can't manage SHLink ` + context.params.shlId);
+      context.response.status = 401;
+      context.response.body = { message: `Unauthorized` };
+      context.response.headers.set('content-type', 'application/json');
+      return;
     }
 
     const newFile = {
@@ -184,25 +259,43 @@ export const shlApiRouter = new oak.Router()
   .delete('/shl/:shlId/file', async (context) => {
     const managementToken = await context.request.headers.get('authorization')?.split(/bearer /i)[1]!;
     const currentFileBody = await context.request.body({type: 'bytes'});
-
-    const shl = db.DbLinks.getManagedShl(context.params.shlId, managementToken);
-    if (!shl) {
-      throw new Error(`Can't manage SHLink ` + context.params.shlId);
+    if (!db.DbLinks.linkExists(context.params.shlId)) {
+      context.response.status = 404;
+      context.response.body = { message: "SHL does not exist or has been deactivated." };
+      context.response.headers.set('content-type', 'application/json');
+      return;
     }
-
+    const shl = db.DbLinks.getManagedShl(context.params.shlId, managementToken)!;
+    if (!shl) {
+      context.response.status = 401;
+      context.response.body = { message: `Unauthorized` };
+      context.response.headers.set('content-type', 'application/json');
+      return;
+    }
+    
     const deleted = db.DbLinks.deleteFile(shl.id, await currentFileBody.value);
     context.response.body = {
       ...shl,
       deleted,
     }
+    context.response.headers.set('content-type', 'application/json');
   })
   .post('/shl/:shlId/endpoint', async (context) => {
     const managementToken = await context.request.headers.get('authorization')?.split(/bearer /i)[1]!;
     const config: types.HealthLinkEndpoint = await context.request.body({ type: 'json' }).value;
 
+    if (!db.DbLinks.linkExists(context.params.shlId)) {
+      context.response.status = 404;
+      context.response.body = { message: "SHL does not exist or has been deactivated." };
+      context.response.headers.set('content-type', 'application/json');
+      return;
+    }
     const shl = db.DbLinks.getManagedShl(context.params.shlId, managementToken)!;
     if (!shl) {
-      throw new Error(`Can't manage SHLink ` + context.params.shlId);
+      context.response.status = 401;
+      context.response.body = { message: `Unauthorized` };
+      context.response.headers.set('content-type', 'application/json');
+      return;
     }
 
     const added = await db.DbLinks.addEndpoint(shl.id, config);
@@ -214,15 +307,27 @@ export const shlApiRouter = new oak.Router()
   })
   .delete('/shl/:shlId', async (context) => {
     const managementToken = await context.request.headers.get('authorization')?.split(/bearer /i)[1]!;
-    if (db.DbLinks.linkExists(context.params.shlId)) {
+    if (!db.DbLinks.linkExists(context.params.shlId)) {
+      context.response.status = 404;
+      context.response.body = { message: "SHL does not exist or has been deactivated." };
+      context.response.headers.set('content-type', 'application/json');
+      return;
+    }
+    try {
       const shl = db.DbLinks.getManagedShl(context.params.shlId, managementToken)!;
       if (!shl) {
-        return (context.response.status = 401);
+        context.response.status = 401;
+        context.response.body = { message: `Unauthorized` };
+        context.response.headers.set('content-type', 'application/json');
+        return;
       }
       const deactivated = db.DbLinks.deactivate(shl);
       context.response.body = deactivated;
-    } else {
-      return (context.response.status = 404);
+    } catch {
+      context.response.status = 404;
+      context.response.body = { message: "SHL does not exist" };
+      context.response.headers.set('content-type', 'application/json');
+      return;
     }
   })
   .post('/subscribe', async (context) => {
@@ -265,6 +370,20 @@ export const shlApiRouter = new oak.Router()
         accessLogSubscriptions.get(shl)!.splice(idx, 1);
       }
     });
+  })
+  .post('/iis', async(context) => {
+    const content = await context.request.body({ type: 'json' }).value;
+    const response = await fetch('http://35.160.125.146:8039/fhir/Patient/', {
+      method: 'POST',
+      headers: content.headers,
+      body: JSON.stringify(content)
+    });
+    if (response.ok) {
+      const body = await response.json();
+      context.response.body = body;
+    } else {
+      throw new Error('Unable to fetch IIS immunization data');
+    };
   });
 
 /*

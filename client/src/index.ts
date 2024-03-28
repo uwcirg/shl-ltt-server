@@ -70,6 +70,12 @@ function needPasscode(config: { shl: string }) {
   return false;
 }
 
+function id(config: { shl: string }) {
+  const shlBody = config.shl.split(/^(?:.+:\/.+#)?shlink:\//)[1];
+  const parsedShl: SHLDecoded = decodeBase64urlToJson(shlBody);
+  return new URL(parsedShl?.url).href.split("/").pop();
+}
+
 async function retrieve(configIncoming: SHLinkConnectRequest | {state: string}) {
   const config: SHLinkConnectRequest = configIncoming["state"] ? JSON.parse(base64url.decode(configIncoming["state"])) : configIncoming
   const shlBody = config.shl.split(/^(?:.+:\/.+#)?shlink:\//)[1];
@@ -84,30 +90,44 @@ async function retrieve(configIncoming: SHLinkConnectRequest | {state: string}) 
       recipient: config.recipient,
     }),
   });
+  let isJson = false;
+  let manifestResponseContent;
+  manifestResponseContent = await manifestResponse.text();
+  try {
+    manifestResponseContent = JSON.parse(manifestResponseContent);
+    isJson = true;
+  } catch (error) {
+    console.warn("Manifest did not return JSON object");
+  }
 
-  const manifestResponseJson = (await manifestResponse.json()) as SHLManifestFile;
+  if (!manifestResponse.ok || !isJson) {
+    return {
+      status: manifestResponse.status,
+      error: (manifestResponseContent ?? "")
+    };
+  } else {
+    const allFiles = (manifestResponseContent as SHLManifestFile).files
+      .filter((f) => f.contentType === 'application/smart-health-card')
+      .map(async (f) =>  {
+        if (f.embedded !== undefined) {
+          return f.embedded
+        } else {
+          return fetch(f.location).then((f) => f.text())
+        }
+      });
 
-  const allFiles = manifestResponseJson.files
-    .filter((f) => f.contentType === 'application/smart-health-card')
-    .map(async (f) =>  {
-      if (f.embedded !== undefined) {
-        return f.embedded
-      } else {
-        return fetch(f.location).then((f) => f.text())
-      }
+    const decryptionKey = base64url.toBuffer(parsedShl.key);
+    const allFilesDecrypted = allFiles.map(async (f) => {
+      const decrypted = await jose.compactDecrypt(await f, decryptionKey);
+      const decoded = new TextDecoder().decode(decrypted.plaintext);
+      return decoded;
     });
 
-  const decryptionKey = base64url.toBuffer(parsedShl.key);
-  const allFilesDecrypted = allFiles.map(async (f) => {
-    const decrypted = await jose.compactDecrypt(await f, decryptionKey);
-    const decoded = new TextDecoder().decode(decrypted.plaintext);
-    return decoded;
-  });
+    const shcs = (await Promise.all(allFilesDecrypted)).flatMap((f) => JSON.parse(f)['verifiableCredential'] as string);
+    const result: SHLinkConnectResponse = { shcs, state: base64url.encode(JSON.stringify(config))};
 
-  const shcs = (await Promise.all(allFilesDecrypted)).flatMap((f) => JSON.parse(f)['verifiableCredential'] as string);
-  const result: SHLinkConnectResponse = { shcs, state: base64url.encode(JSON.stringify(config))};
-
-  return result;
+    return result;
+  }
 }
 
-export { flag, retrieve };
+export { flag, id, retrieve };

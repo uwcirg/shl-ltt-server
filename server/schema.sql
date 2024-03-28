@@ -60,5 +60,5 @@ create trigger if not exists disable_shlink_on_passcode_failure
   after update on shlink
   for each row
     begin
-        update shlink set active=false where new.passcode_failures_remaining <= 0;
+        update shlink set active=false where id=new.id and passcode_failures_remaining <= 0;
     end;
