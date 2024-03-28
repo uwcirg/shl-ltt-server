@@ -370,20 +370,6 @@ export const shlApiRouter = new oak.Router()
         accessLogSubscriptions.get(shl)!.splice(idx, 1);
       }
     });
-  })
-  .post('/iis', async(context) => {
-    const content = await context.request.body({ type: 'json' }).value;
-    const response = await fetch('http://35.160.125.146:8039/fhir/Patient/', {
-      method: 'POST',
-      headers: content.headers,
-      body: JSON.stringify(content)
-    });
-    if (response.ok) {
-      const body = await response.json();
-      context.response.body = body;
-    } else {
-      throw new Error('Unable to fetch IIS immunization data');
-    };
   });
 
 /*
