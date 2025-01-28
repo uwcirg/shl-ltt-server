@@ -66,3 +66,32 @@ export interface SHLDecoded {
   exp?: number;
   label?: string;
 }
+
+export interface LogMessageSimple {
+  "message": string;
+  "tags"?: string[];
+  "level"?: "INFO" | "ERROR" | "WARN" | "DEBUG";
+  "subject"?: string;
+  "user"?: string;
+  "name"?: string;
+  "deployment"?: "dev" | "test" | "demo" | "stage" | "prod";
+  "system-type"?: string;
+  "system-url"?: string;
+  "session-id"?: string;
+}
+export interface LogMessage {
+  "event_version": string;
+  "asctime": string;
+  "name": string;
+  "level": "INFO" | "ERROR" | "WARN" | "DEBUG";
+  "deployment": "dev" | "test" | "demo" | "stage" | "prod";
+  "system-url": string;
+  "system-type": string;
+  "user": string;
+  "subject": string;
+  "tags": string[];
+  "message": string;
+  "session-id": string;
+  "ip-address": string;
+  "user-agent": string;
+}

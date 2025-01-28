@@ -1,6 +1,7 @@
 const defaultEnv = {
-  PUBLIC_URL: 'https://shl-server.inform.dev.cirg.uw.edu',
-  EMBEDDED_LENGTH_MAX: 10_000
+  PUBLIC_URL: 'http://localhost:9000',
+  EMBEDDED_LENGTH_MAX: 10_000,
+  DEPLOYMENT: 'dev' as ('dev' | 'test' | 'demo' | 'stage' | 'prod'),
 };
 
 async function envOrDefault(variable: string, defaultValue: string | number) {

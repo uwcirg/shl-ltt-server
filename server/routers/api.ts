@@ -24,16 +24,59 @@ interface ManifestAccessTicket {
 }
 const manifestAccessTickets: Map<string, ManifestAccessTicket> = new Map();
 
+function log(content: types.LogMessageSimple, context) {
+  let defaults: types.LogMessage = {
+    "event_version": "1",
+    "asctime": new Date().toISOString(),
+    "name": "shl-ltt-server",
+    "level": "INFO",
+    "deployment": env.DEPLOYMENT,
+    "system-type": "server",
+    "system-url": env.PUBLIC_URL,
+    "user": "",
+    "subject": "",
+    "tags": [],
+    "message": "",
+    "session-id": "",
+    "ip-address": context.request.ip,
+    "user-agent": context.request.userAgent,
+  }
+
+  const logMessage: types.LogMessage = { ...defaults, ...content };
+  logMessage.tags.push(`${context.request.method} ${context.request.url}`);
+  console.log(JSON.stringify(logMessage));
+}
+
 export const shlApiRouter = new oak.Router()
-  .post('/shl', async (context) => {
+  .post('/log', async (context: oak.Context) => {
+    const content: types.LogMessageSimple = await context.request.body({ type: 'json' }).value;
+    if (content.message) {
+      let defaults = {
+        "name": "external",
+        "system-type": "client",
+      };
+      let logMessage = { ...defaults, ...content };
+      log(logMessage, context);
+      return;
+    }
+    context.response.status = 400;
+    context.response.headers.set('content-type', 'application/json');
+    return (context.response.body = { message: "Log content must contain a message." });
+  })
+  .post('/shl', async (context: oak.Context) => {
     const config: types.HealthLinkConfig = await context.request.body({ type: 'json' }).value;
     const newLink = db.DbLinks.create(config);
     console.log("Created link " + newLink.id);
-    context.response.body = {
+    log({
+      message: `Created new SHL ${newLink.id} for session ${newLink.sessionId}`,
+      level: "INFO",
+      tags: ["new-link", `shl-${newLink.id}`, `session-${newLink.sessionId}`],
+    }, context);
+    return (context.response.body = {
       ...newLink,
       files: undefined,
       config: undefined,
-    };
+    });
   })
   .post('/shl/:shlId', async (context) => {
     const config: types.HealthLinkManifestRequest = await context.request.body({ type: 'json' }).value;
