@@ -1,8 +1,8 @@
-import env from '../config.ts';
-import { jose, oak } from '../deps.ts';
-import * as db from '../db.ts';
-import * as types from '../types.ts';
-import { randomStringWithEntropy } from '../util.ts';
+import env from '../config';
+import { jose, oak } from '../deps';
+import * as db from '../db';
+import * as types from '../types';
+import { randomStringWithEntropy } from '../util';
 
 type SubscriptionTicket = string;
 type SubscriptionSet = string[];
@@ -78,7 +78,7 @@ export const shlApiRouter = new oak.Router()
       config: undefined,
     });
   })
-  .post('/shl/:shlId', async (context) => {
+  .post('/shl/:shlId', async (context: oak.Context) => {
     const config: types.HealthLinkManifestRequest = await context.request.body({ type: 'json' }).value;
     const embeddedLengthMax = Math.min(env.EMBEDDED_LENGTH_MAX, config.embeddedLengthMax !== undefined ? config.embeddedLengthMax : Infinity);
 
@@ -128,7 +128,8 @@ export const shlApiRouter = new oak.Router()
     db.DbLinks.recordAccess(shl.id, config.recipient);
 
     context.response.headers.set('expires', new Date().toUTCString());
-    context.response.body = {
+    context.response.headers.set('content-type', 'application/json');
+    return (context.response.body = {
       files: db.DbLinks.getManifestFiles(shl.id, embeddedLengthMax)
         .map((f, _i) => ({
           contentType: f.contentType,
@@ -142,10 +143,9 @@ export const shlApiRouter = new oak.Router()
             location: `${env.PUBLIC_URL}/api/shl/${shl.id}/endpoint/${e.id}?ticket=${ticket}`,
           })),
         ),
-    };
-    context.response.headers.set('content-type', 'application/json');
+    });
   })
-  .put('/shl/:shlId', async (context) => {
+  .put('/shl/:shlId', async (context: oak.Context) => {
     const managementToken = await context.request.headers.get('authorization')?.split(/bearer /i)[1]!;
     const config = await context.request.body({ type: 'json' }).value;
     if (!db.DbLinks.linkExists(context.params.shlId)) {
@@ -186,20 +186,20 @@ export const shlApiRouter = new oak.Router()
     context.response.headers.set('content-type', 'application/json');
     return;
   })
-  .put('/shl/:shlId/reactivate', async (context) => {
+  .put('/shl/:shlId/reactivate', async (context: oak.Context) => {
     const managementToken = await context.request.headers.get('authorization')?.split(/bearer /i)[1]!;
     const success = db.DbLinks.reactivate(context.params.shlId, managementToken)!;
     console.log("Reactivated " + context.params.shlId + ": " + success);
     context.response.headers.set('content-type', 'application/json');
     return (context.response.body = success);
   })
-  .get('/user/:userId', async (context) => {
+  .get('/user/:userId', async (context: oak.Context) => {
     const shl = db.DbLinks.getUserShl(context.params.userId)!;
     if (!shl) {
       console.log(`Can't find SHLink for user ` + context.params.userId);
       return;
     }
-    context.response.body = shl;
+    return (context.response.body = shl);
   })
   .get('/shl/:shlId/file/:fileIndex', (context) => {
     const ticket = manifestAccessTickets.get(context.request.url.searchParams.get('ticket')!);
@@ -223,7 +223,7 @@ export const shlApiRouter = new oak.Router()
     context.response.headers.set('content-type', 'application/jose');
     context.response.body = file.content;
   })
-  .get('/shl/:shlId/endpoint/:endpointId', async (context) => {
+  .get('/shl/:shlId/endpoint/:endpointId', async (context: oak.Context) => {
     const ticket = manifestAccessTickets.get(context.request.url.searchParams.get('ticket')!);
     if (!ticket) {
       console.log('Cannot request SHL without a valid ticket');
@@ -253,9 +253,9 @@ export const shlApiRouter = new oak.Router()
         enc: 'A256GCM',
       })
       .encrypt(jose.base64url.decode(endpoint.config.key));
-    context.response.body = encrypted;
+    return (context.response.body = encrypted);
   })
-  .post('/shl/:shlId/file', async (context) => {
+  .post('/shl/:shlId/file', async (context: oak.Context) => {
     const managementToken = await context.request.headers.get('authorization')?.split(/bearer /i)[1]!;
     const newFileBody = await context.request.body({ type: 'bytes' });
 
@@ -279,12 +279,12 @@ export const shlApiRouter = new oak.Router()
     };
 
     const added = db.DbLinks.addFile(shl.id, newFile);
-    context.response.body = {
+    return (context.response.body = {
       ...shl,
       added,
-    };
+    });
   })
-  .delete('/shl/:shlId/file/all', async (context) => {
+  .delete('/shl/:shlId/file/all', async (context: oak.Context) => {
     const managementToken = await context.request.headers.get('authorization')?.split(/bearer /i)[1]!;
     const currentFileBody = await context.request.body({type: 'bytes'});
 
@@ -294,12 +294,12 @@ export const shlApiRouter = new oak.Router()
     }
 
     const deleted = db.DbLinks.deleteAllFiles(shl.id);
-    context.response.body = {
+    return (context.response.body = {
       ...shl,
       deleted,
-    }
+    });
   })
-  .delete('/shl/:shlId/file', async (context) => {
+  .delete('/shl/:shlId/file', async (context: oak.Context) => {
     const managementToken = await context.request.headers.get('authorization')?.split(/bearer /i)[1]!;
     const currentFileBody = await context.request.body({type: 'bytes'});
     if (!db.DbLinks.linkExists(context.params.shlId)) {
@@ -317,13 +317,13 @@ export const shlApiRouter = new oak.Router()
     }
     
     const deleted = db.DbLinks.deleteFile(shl.id, await currentFileBody.value);
-    context.response.body = {
+    context.response.headers.set('content-type', 'application/json');
+    return (context.response.body = {
       ...shl,
       deleted,
-    }
-    context.response.headers.set('content-type', 'application/json');
+    });
   })
-  .post('/shl/:shlId/endpoint', async (context) => {
+  .post('/shl/:shlId/endpoint', async (context: oak.Context) => {
     const managementToken = await context.request.headers.get('authorization')?.split(/bearer /i)[1]!;
     const config: types.HealthLinkEndpoint = await context.request.body({ type: 'json' }).value;
 
@@ -343,12 +343,12 @@ export const shlApiRouter = new oak.Router()
 
     const added = await db.DbLinks.addEndpoint(shl.id, config);
     console.log("Added", added)
-    context.response.body = {
+    return (context.response.body = {
       ...shl,
       added,
-    };
+    });
   })
-  .delete('/shl/:shlId', async (context) => {
+  .delete('/shl/:shlId', async (context: oak.Context) => {
     const managementToken = await context.request.headers.get('authorization')?.split(/bearer /i)[1]!;
     if (!db.DbLinks.linkExists(context.params.shlId)) {
       context.response.status = 404;
@@ -365,7 +365,7 @@ export const shlApiRouter = new oak.Router()
         return;
       }
       const deactivated = db.DbLinks.deactivate(shl);
-      context.response.body = deactivated;
+      return (context.response.body = deactivated);
     } catch {
       context.response.status = 404;
       context.response.body = { message: "SHL does not exist" };
@@ -373,7 +373,7 @@ export const shlApiRouter = new oak.Router()
       return;
     }
   })
-  .post('/subscribe', async (context) => {
+  .post('/subscribe', async (context: oak.Context) => {
     const shlSet: { shlId: string; managementToken: string }[] = await context.request.body({ type: 'json' }).value;
     const managedLinks = shlSet.map((req) => db.DbLinks.getManagedShl(req.shlId, req.managementToken));
 
@@ -385,7 +385,7 @@ export const shlApiRouter = new oak.Router()
     setTimeout(() => {
       subscriptionTickets.delete(ticket);
     }, 10000);
-    context.response.body = { subscribe: `${env.PUBLIC_URL}/api/subscribe/${ticket}` };
+    return (context.response.body = { subscribe: `${env.PUBLIC_URL}/api/subscribe/${ticket}` });
   })
   .get('/subscribe/:ticket', (context) => {
     const validForSet = subscriptionTickets.get(context.params.ticket);
