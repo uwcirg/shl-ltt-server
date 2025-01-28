@@ -1,7 +1,7 @@
-import { base64url, queryString, sqlite } from './deps';
-import { clientConnectionListener } from './routers/api';
-import * as types from './types';
-import { randomStringWithEntropy } from './util';
+import { base64url, queryString, sqlite } from './deps.ts';
+import { clientConnectionListener } from './routers/api.ts';
+import * as types from './types.ts';
+import { randomStringWithEntropy } from './util.ts';
 
 const { DB } = sqlite;
 

@@ -3,5 +3,8 @@
     "lib": ["esnext", "dom"],
     "target": "esnext",
     "module": "esnext",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "strict": true
   }
 }

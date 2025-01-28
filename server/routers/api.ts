@@ -1,8 +1,8 @@
-import env from '../config';
-import { jose, oak } from '../deps';
-import * as db from '../db';
-import * as types from '../types';
-import { randomStringWithEntropy } from '../util';
+import env from '../config.ts';
+import { jose, oak } from '../deps.ts';
+import * as db from '../db.ts';
+import * as types from '../types.ts';
+import { randomStringWithEntropy } from '../util.ts';
 
 type SubscriptionTicket = string;
 type SubscriptionSet = string[];
