@@ -24,8 +24,8 @@ interface ManifestAccessTicket {
 }
 const manifestAccessTickets: Map<string, ManifestAccessTicket> = new Map();
 
-function applyLogFallbacks(logMessage: types.LogMessageSimple, defaults: types.LogMessageDefaults) {
-  logMessage.entity.detail = {...defaults.entity.detail, ...logMessage.entity.detail};
+function applyLogFallbacks(logMessage: types.LogMessageSimple, defaults: Partial<types.LogMessage>) {
+  logMessage.entity.detail = {...(defaults.entity?.detail ?? {}), ...(logMessage.entity.detail ?? {})};
   logMessage.entity = {...defaults.entity, ...logMessage.entity};
   logMessage.source = {...defaults.source, ...logMessage.source};
   logMessage.agent = {...defaults.agent, ...logMessage.agent};
@@ -262,6 +262,10 @@ export const shlApiRouter = new oak.Router()
         agent: {
           who: userId
         },
+        entity: { detail: {
+          action: `Update config for shl '${context.params.shlId}'`,
+          config: JSON.stringify(config),
+        }},
         outcome: `${status} ${message}`,
       });
       context.response.status = status;
@@ -418,7 +422,7 @@ export const shlApiRouter = new oak.Router()
           shl: context.params.shlId,
           file: context.params.fileIndex
         } },
-        outcome: `${status} ${message}: missing ticket`,
+        outcome: `${status} ${message}: ticket not found`,
       });
       context.response.status = status;
       context.response.body = {
