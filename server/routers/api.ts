@@ -443,6 +443,7 @@ export const shlApiRouter = new oak.Router()
         action: "read",
         severity: "warning",
         entity: { detail: { action: `Get shl for user '${context.params.userId}'` } },
+        outcome: `SHL not found for user '${context.params.userId}'`,
       }, {userId: context.params.userId} as types.HealthLink);
       return;
     }
