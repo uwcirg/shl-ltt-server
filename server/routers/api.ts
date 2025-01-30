@@ -25,7 +25,9 @@ interface ManifestAccessTicket {
 const manifestAccessTickets: Map<string, ManifestAccessTicket> = new Map();
 
 function applyLogFallbacks(logMessage: types.LogMessageSimple, defaults: Partial<types.LogMessage>) {
-  logMessage.entity.detail = {...(defaults.entity?.detail ?? {}), ...(logMessage.entity.detail ?? {})};
+  if (logMessage.entity) {
+    logMessage.entity.detail = {...(defaults.entity?.detail ?? {}), ...(logMessage.entity?.detail ?? {})}; 
+  }
   logMessage.entity = {...defaults.entity, ...logMessage.entity};
   logMessage.source = {...defaults.source, ...logMessage.source};
   logMessage.agent = {...defaults.agent, ...logMessage.agent};
