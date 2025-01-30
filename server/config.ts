@@ -1,7 +1,14 @@
-const defaultEnv = {
+interface Config {
+  PUBLIC_URL: string;
+  EMBEDDED_LENGTH_MAX: number;
+  DEPLOYMENT: 'dev' | 'test' | 'demo' | 'stage' | 'prod';
+  VERSION?: string;
+};
+
+const defaultEnv: Config = {
   PUBLIC_URL: 'http://localhost:9000',
   EMBEDDED_LENGTH_MAX: 10_000,
-  DEPLOYMENT: 'dev' as ('dev' | 'test' | 'demo' | 'stage' | 'prod'),
+  DEPLOYMENT: 'dev',
 };
 
 async function envOrDefault(variable: string, defaultValue: string | number) {
