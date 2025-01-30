@@ -434,21 +434,6 @@ export const shlApiRouter = new oak.Router()
       return;
     }
   })
-  .get('/user/:userId', async (context: oak.Context) => {
-    const shl = db.DbLinks.getUserShl(context.params.userId)!;
-    if (!shl) {
-      log(context, {
-        action: "read",
-        severity: "warning",
-        entity: { detail: { action: `Get shl for user '${context.params.userId}'` } },
-      }, {userId: context.params.userId} as types.HealthLink);
-      return;
-    }
-    log(context, {
-      action: "read"
-    }, shl);
-    return (context.response.body = shl);
-  })
   .get('/shl/:shlId/file/:fileIndex', (context) => {
     const ticket = manifestAccessTickets.get(context.request.url.searchParams.get('ticket')!);
     if (!ticket) {
