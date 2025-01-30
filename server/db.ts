@@ -67,13 +67,18 @@ export const DbLinks = {
     return link;
   },
   updateConfig(linkId:string, config: types.HealthLinkConfig) {
-    db.query(`UPDATE shlink set config_passcode=:passcode, config_exp=:exp, session_id=:sessionId where id=:id`,
+    try{
+      db.query(`UPDATE shlink set config_passcode=:passcode, config_exp=:exp, session_id=:sessionId where id=:id`,
     {
       id: linkId,
       exp: config.exp,
       passcode: config.passcode,
       sessionId: config.sessionId
     });
+    }catch(e){
+      console.log(e);
+      return false;
+    }
     return true;
   },
   deactivate(shl: types.HealthLink, managementToken: string): boolean {
