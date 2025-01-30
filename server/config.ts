@@ -1,14 +1,12 @@
 interface Config {
   PUBLIC_URL: string;
-  EMBEDDED_LENGTH_MAX: number;
-  DEPLOYMENT: 'dev' | 'test' | 'demo' | 'stage' | 'prod';
+  EMBEDDED_LENGTH_MAX?: number;
   VERSION?: string;
 };
 
 const defaultEnv: Config = {
   PUBLIC_URL: 'http://localhost:9000',
   EMBEDDED_LENGTH_MAX: 10_000,
-  DEPLOYMENT: 'dev',
 };
 
 async function envOrDefault(variable: string, defaultValue: string | number) {
