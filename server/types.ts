@@ -34,9 +34,9 @@ export interface HealthLink {
   id: string;
   userId?: string;
   sessionId?: string;
-  created: string;
+  created: number;
   managementToken?: string;
-  passcodeFailuresRemaining: number;
+  passcodeFailuresRemaining?: number;
 }
 
 export interface HealthLinkManifestRequest {
@@ -67,31 +67,33 @@ export interface SHLDecoded {
   label?: string;
 }
 
-export interface LogMessageSimple {
-  "message": string;
-  "tags"?: string[];
-  "level"?: "INFO" | "ERROR" | "WARN" | "DEBUG";
-  "subject"?: string;
-  "user"?: string;
-  "name"?: string;
-  "deployment"?: "dev" | "test" | "demo" | "stage" | "prod";
-  "system-type"?: string;
-  "system-url"?: string;
-  "session-id"?: string;
-}
+type Action = 'create' | 'read' | 'update' | 'delete' | 'execute' | 'login' | 'logout';
+type Severity = 'critical' | 'error' | 'warning' | 'info' | 'debug';
+
 export interface LogMessage {
-  "event_version": string;
-  "asctime": string;
-  "name": string;
-  "level": "INFO" | "ERROR" | "WARN" | "DEBUG";
-  "deployment": "dev" | "test" | "demo" | "stage" | "prod";
-  "system-url": string;
-  "system-type": string;
-  "user": string;
-  "subject": string;
-  "tags": string[];
-  "message": string;
-  "session-id": string;
-  "ip-address": string;
-  "user-agent": string;
+  version: string;
+  severity: Severity;
+  action: Action;
+  occurred?: string; // datetime of event
+  subject?: string; // subject id
+  agent?: {
+    ip_address?: string;
+    user_agent?: string;
+    type?: string; // e.g. system, user
+    who?: string; // agent id
+  };
+  source?: {
+    observer?: string; // system url
+    type?: string; // system/project name
+    version?: string; // system version
+  }
+  entity?: {
+    detail?: {[key: string] : string}; // additional info
+    query?: string; // query parameters
+  };
+  outcome?: string; // failure or warning details
+}
+
+export interface LogMessageSimple extends Partial<LogMessage> {
+  action: Action;
 }
