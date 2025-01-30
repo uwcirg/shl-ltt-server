@@ -89,7 +89,7 @@ export const shlApiRouter = new oak.Router()
     log(context, {
       action: "create",
       entity: { detail: {
-        action: `Create shl ${newLink.id} for user ${newLink.userId}`,
+        action: `Create shl '${newLink.id}' for user '${newLink.userId}'`,
       }}
     }, newLink);
     return (context.response.body = {
@@ -114,7 +114,7 @@ export const shlApiRouter = new oak.Router()
           who: config.recipient
         },
         entity: { detail: {
-          action: `Manifest request for shl ${context.params.shlId}`,
+          action: `Manifest request for shl '${context.params.shlId}'`,
         }},
         outcome: `${status} ${message}`,
       });
@@ -134,7 +134,7 @@ export const shlApiRouter = new oak.Router()
           who: config.recipient
         },
         entity: { detail: {
-          action: `Manifest request for shl ${context.params.shlId}`,
+          action: `Manifest request for shl '${context.params.shlId}'`,
         }},
         outcome: `${status} ${message}`,
       }, shl);
@@ -154,7 +154,7 @@ export const shlApiRouter = new oak.Router()
           who: config.recipient
         },
         entity: { detail: {
-          action: `Manifest request for shl ${context.params.shlId}`,
+          action: `Manifest request for shl '${context.params.shlId}'`,
           remainingAttempts: String(remainingAttempts)
         } },
         outcome: `${status} ${message}`,
@@ -176,7 +176,7 @@ export const shlApiRouter = new oak.Router()
         action: "create",
         severity: "error",
         entity: { detail: {
-          action: `Manifest request for shl ${context.params.shlId}`,
+          action: `Manifest request for shl '${context.params.shlId}'`,
           remainingAttempts: String(remainingAttempts)
         } },
         outcome: `${status} ${message}`,
@@ -202,7 +202,7 @@ export const shlApiRouter = new oak.Router()
     log(context, {
       action: "create",
       entity: { detail: {
-        action: `Manifest request for shl ${context.params.shlId}`,
+        action: `Manifest request for shl '${context.params.shlId}'`,
         recipient: config.recipient,
         ticket: ticket
       } },
@@ -241,7 +241,7 @@ export const shlApiRouter = new oak.Router()
           who: userId
         },
         entity: { detail: {
-          action: `Update config for shl ${context.params.shlId}`,
+          action: `Update config for shl '${context.params.shlId}'`,
           config: JSON.stringify(config),
         }},
         outcome: `${status} ${message}`,
@@ -300,7 +300,7 @@ export const shlApiRouter = new oak.Router()
       log(context, {
         action: "read",
         severity: "error",
-        entity: { detail: { action: `Read active status for shl ${context.params.shlId}` } },
+        entity: { detail: { action: `Read active status for shl '${context.params.shlId}'` } },
         outcome: `${status} ${message}`,
       });
       context.response.status = status;
@@ -328,7 +328,7 @@ export const shlApiRouter = new oak.Router()
         },
         entity: { detail: {
           shl: context.params.shlId,
-          action: `Reactivate shl ${context.params.shlId}`
+          action: `Reactivate shl '${context.params.shlId}'`
         } },
         outcome: `${status} ${message}`,
       });
@@ -352,7 +352,7 @@ export const shlApiRouter = new oak.Router()
           entity: { detail: {
             shl: context.params.shlId,
             shl_session: db.DbLinks.getShlInternal(context.params.shlId)?.sessionId,
-            action: `Reactivate shl ${context.params.shlId}`
+            action: `Reactivate shl '${context.params.shlId}'`
           } },
           outcome: `${status} ${message}`,
         });
@@ -364,7 +364,7 @@ export const shlApiRouter = new oak.Router()
       const reactivated = db.DbLinks.reactivate(context.params.shlId, managementToken)!;
       log(context, {
         action: "update",
-        entity: { detail: { action: `Reactivated shl ${context.params.shlId}` } },
+        entity: { detail: { action: `Reactivated shl '${context.params.shlId}'` } },
       }, shl);
       return (context.response.body = reactivated);
     } catch {
@@ -379,7 +379,7 @@ export const shlApiRouter = new oak.Router()
         },
         entity: { detail: {
           shl: context.params.shlId,
-          action: `Reactivate shl ${context.params.shlId}`
+          action: `Reactivate shl '${context.params.shlId}'`
         } },
         outcome: `${status} ${message}`,
       });
@@ -395,7 +395,7 @@ export const shlApiRouter = new oak.Router()
       log(context, {
         action: "read",
         severity: "warning",
-        entity: { detail: { action: `Get shl for user ${context.params.userId}` } },
+        entity: { detail: { action: `Get shl for user '${context.params.userId}'` } },
       }, {userId: context.params.userId} as types.HealthLink);
       return;
     }
@@ -413,7 +413,7 @@ export const shlApiRouter = new oak.Router()
         action: "read",
         severity: "error",
         entity: { detail: {
-          action: `Get file ${context.params.fileIndex} for shl ${context.params.shlId}`,
+          action: `Get file '${context.params.fileIndex}' for shl '${context.params.shlId}'`,
           ticket: ticket,
           shl: context.params.shlId,
           file: context.params.fileIndex
@@ -436,7 +436,7 @@ export const shlApiRouter = new oak.Router()
         severity: "error",
         subject: db.DbLinks.getShlInternal(context.params.shlId)?.userId,
         entity: { detail: {
-          action: `Get file ${context.params.fileIndex} for shl ${context.params.shlId}`,
+          action: `Get file '${context.params.fileIndex}' for shl '${context.params.shlId}'`,
           ticket: ticket,
           shl: context.params.shlId,
           file: context.params.fileIndex
@@ -457,7 +457,7 @@ export const shlApiRouter = new oak.Router()
       action: "read",
       subject: db.DbLinks.getShlInternal(context.params.shlId)?.userId,
       entity: { detail: {
-        action: `Get file ${context.params.fileIndex} for shl ${context.params.shlId}`,
+        action: `Get file '${context.params.fileIndex}' for shl '${context.params.shlId}'`,
         ticket: ticket,
         shl: context.params.shlId,
         file: context.params.fileIndex,
@@ -515,7 +515,7 @@ export const shlApiRouter = new oak.Router()
           who: db.DbLinks.getTokenOwner(managementToken)
         },
         entity: { detail: {
-          action: `Add file to shl ${context.params.shlId}`,
+          action: `Add file to shl '${context.params.shlId}'`,
         }},
         outcome: `${status} ${message}`,
       });
@@ -536,7 +536,7 @@ export const shlApiRouter = new oak.Router()
           who: db.DbLinks.getTokenOwner(managementToken)
         },
         entity: { detail: {
-          action: `Add file to shl ${context.params.shlId}`,
+          action: `Add file to shl '${context.params.shlId}'`,
           shl: context.params.shlId,
         }},
         outcome: `${status} ${message}`,
@@ -557,7 +557,7 @@ export const shlApiRouter = new oak.Router()
     log(context, {
       action: "create",
       entity: { detail: {
-        action: `Add file ${added} to shl ${shl.id}`,
+        action: `Add file '${added}' to shl '${shl.id}'`,
         file: added,
         contentType: newFile.contentType,
       } },
@@ -583,7 +583,7 @@ export const shlApiRouter = new oak.Router()
           who: db.DbLinks.getTokenOwner(managementToken)
         },
         entity: { detail: {
-          action: `Delete all files from shl ${context.params.shlId}`,
+          action: `Delete all files from shl '${context.params.shlId}'`,
           shl: context.params.shlId,
         }},
         outcome: `${status} ${message}`,
@@ -602,7 +602,7 @@ export const shlApiRouter = new oak.Router()
         who: db.DbLinks.getTokenOwner(managementToken)
       },
       entity: { detail: {
-        action: `Delete all files from shl ${shl.id}`,
+        action: `Delete all files from shl '${shl.id}'`,
         ...(files.reduce((r, f) => ({ ...r, [f.hash]: f.contentType }), {})),
       }}
     }, shl);
@@ -625,7 +625,7 @@ export const shlApiRouter = new oak.Router()
           who: db.DbLinks.getTokenOwner(managementToken)
         },
         entity: { detail: {
-          action: `Delete all files from shl ${context.params.shlId}`,
+          action: `Delete all files from shl '${context.params.shlId}'`,
           shl: context.params.shlId,
         }},
         outcome: `${status} ${message}`,
@@ -647,7 +647,7 @@ export const shlApiRouter = new oak.Router()
           who: db.DbLinks.getTokenOwner(managementToken)
         },
         entity: { detail: {
-          action: `Delete all files from shl ${context.params.shlId}`,
+          action: `Delete all files from shl '${context.params.shlId}'`,
           shl: context.params.shlId,
         }},
         outcome: `${status} ${message}`,
@@ -663,7 +663,7 @@ export const shlApiRouter = new oak.Router()
     log(context, {
       action: "delete",
       entity: { detail: {
-        action: `Deleted file ${deleted} from shl ${shl.id}`,
+        action: `Deleted file '${deleted}' from shl '${shl.id}'`,
         file: deleted,
         contentType: contentType
       } }
@@ -712,7 +712,7 @@ export const shlApiRouter = new oak.Router()
           who: db.DbLinks.getTokenOwner(managementToken)
         },
         entity: { detail: {
-          action: `Delete shl ${context.params.shlId}`,
+          action: `Delete shl '${context.params.shlId}'`,
           shl: context.params.shlId,
         }},
         outcome: `${status} ${message}`,
@@ -735,7 +735,7 @@ export const shlApiRouter = new oak.Router()
             who: db.DbLinks.getTokenOwner(managementToken)
           },
           entity: { detail: {
-            action: `Deactivate shl ${context.params.shlId}`,
+            action: `Deactivate shl '${context.params.shlId}'`,
             shl: context.params.shlId,
           }},
           outcome: `${status} ${message}`,
@@ -750,7 +750,7 @@ export const shlApiRouter = new oak.Router()
       log(context, {
         action: "delete",
         entity: { detail: {
-          action: `Deactivated shl ${context.params.shlId}`,
+          action: `Deactivated shl '${context.params.shlId}'`,
         }}
       }, shl);
 
@@ -766,7 +766,7 @@ export const shlApiRouter = new oak.Router()
           who: db.DbLinks.getTokenOwner(managementToken)
         },
         entity: { detail: {
-          action: `Deactivate shl ${context.params.shlId}`,
+          action: `Deactivate shl '${context.params.shlId}'`,
           shl: context.params.shlId,
         }},
         outcome: `${status} ${message}`,
