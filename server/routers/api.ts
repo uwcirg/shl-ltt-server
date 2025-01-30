@@ -101,6 +101,24 @@ export const shlApiRouter = new oak.Router()
   .post('/shl/:shlId', async (context: oak.Context) => {
     const config: types.HealthLinkManifestRequest = await context.request.body({ type: 'json' }).value;
     const embeddedLengthMax = Math.min(env.EMBEDDED_LENGTH_MAX, config.embeddedLengthMax ?? Infinity);
+    if (!config.recipient) {
+      let status = 400;
+      let message = "Recipient not specified in request body.";
+      log(context, {
+        action: "create",
+        severity: "error",
+        subject: db.DbLinks.getShlInternal(context.params.shlId)?.userId,
+        entity: { detail: {
+          action: `Manifest request for shl '${context.params.shlId}'`,
+          shl: context.params.shlId
+        }},
+        outcome: `${status} ${message}`,
+      });
+      context.response.status = status;
+      context.response.body = { message: message};
+      context.response.headers.set('content-type', 'application/json');
+      return;
+    }
     let shl: types.HealthLink;
     try {
       shl = db.DbLinks.getShlInternal(context.params.shlId);
@@ -230,6 +248,29 @@ export const shlApiRouter = new oak.Router()
     const managementToken = await context.request.headers.get('authorization')?.split(/bearer /i)[1]!;
     const config = await context.request.body({ type: 'json' }).value;
     let userId = db.DbLinks.getTokenOwner(managementToken);
+
+    if (!config.sessionId) {
+      let status = 400;
+      let message = "Missing session_id";
+      log(context, {
+        action: "update",
+        severity: "error",
+        subject: db.DbLinks.getShlInternal(context.params.shlId)?.userId,
+        agent: {
+          who: userId
+        },
+        entity: { detail: {
+          action: `Update config for shl '${context.params.shlId}'`,
+          config: JSON.stringify(config),
+        }},
+        outcome: `${status} ${message}`,
+      });
+      context.response.status = status;
+      context.response.body = { message: message }
+      context.response.headers.set('content-type', 'application/json');
+      return;
+    }
+
     if (!db.DbLinks.linkExists(context.params.shlId)) {
       let status = 404;
       let message = "SHL does not exist or has been deactivated.";
