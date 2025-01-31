@@ -54,8 +54,8 @@ function log(context: oak.Context, msg: types.LogMessageSimple, shl?: types.Heal
     },
     entity: {
       detail: {
-        shl: shl?.id,
-        shl_session: shl?.sessionId,
+        shl: shl?.id ?? "",
+        shl_session: shl?.sessionId ?? "",
         url: context.request.url.toString(),
         method: context.request.method,
       }
@@ -82,7 +82,6 @@ export const shlApiRouter = new oak.Router()
     };
     const logMessage = applyLogFallbacks(content, defaults);
     log(context, logMessage);
-    return;
   })
   .post('/shl', async (context: oak.Context) => {
     const config: types.HealthLinkConfig = await context.request.body({ type: 'json' }).value;
@@ -191,7 +190,7 @@ export const shlApiRouter = new oak.Router()
       db.DbLinks.recordPasscodeFailure(shl.id);
       let status = 401;
       let message = "Incorrect password";
-      let remainingAttempts = shl.passcodeFailuresRemaining - 1;
+      let remainingAttempts = shl.passcodeFailuresRemaining ? shl.passcodeFailuresRemaining - 1 : 0;
       log(context, {
         action: "create",
         severity: "error",
@@ -398,7 +397,7 @@ export const shlApiRouter = new oak.Router()
           },
           entity: { detail: {
             shl: context.params.shlId,
-            shl_session: db.DbLinks.getShlInternal(context.params.shlId)?.sessionId,
+            shl_session: db.DbLinks.getShlInternal(context.params.shlId)?.sessionId ?? "unknown",
             action: `Reactivate shl '${context.params.shlId}'`
           } },
           outcome: `${status} ${message}`,
@@ -462,11 +461,10 @@ export const shlApiRouter = new oak.Router()
         severity: "error",
         entity: { detail: {
           action: `Get file '${context.params.fileIndex}' for shl '${context.params.shlId}'`,
-          ticket: ticket,
           shl: context.params.shlId,
           file: context.params.fileIndex
         } },
-        outcome: `${status} ${message}: ticket not found`,
+        outcome: `${status} ${message}: missing ticket`,
       });
       context.response.status = status;
       context.response.body = {
@@ -485,7 +483,7 @@ export const shlApiRouter = new oak.Router()
         subject: db.DbLinks.getShlInternal(context.params.shlId)?.userId,
         entity: { detail: {
           action: `Get file '${context.params.fileIndex}' for shl '${context.params.shlId}'`,
-          ticket: ticket,
+          ticket: context.request.url.searchParams.get('ticket')!,
           shl: context.params.shlId,
           file: context.params.fileIndex
         } },
@@ -506,7 +504,7 @@ export const shlApiRouter = new oak.Router()
       subject: db.DbLinks.getShlInternal(context.params.shlId)?.userId,
       entity: { detail: {
         action: `Get file '${context.params.fileIndex}' for shl '${context.params.shlId}'`,
-        ticket: ticket,
+        ticket: context.request.url.searchParams.get('ticket')!,
         shl: context.params.shlId,
         file: context.params.fileIndex,
         contentType: file.contentType
@@ -916,9 +914,9 @@ export const shlApiRouter = new oak.Router()
       entity: { detail: {
         action: `Update shl set via subscription`,
         ticket: context.params.ticket,
-        ...(validForSet.reduce((acc, shl) => ({ ...acc, [shl.shlId]: shl.managementToken }), {})),
+        shls: JSON.stringify(validForSet)
       }}
-    }, validForSet[0]);
+    });
   });
 
 /*

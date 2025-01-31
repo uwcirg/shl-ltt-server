@@ -1,6 +1,6 @@
 interface Config {
   PUBLIC_URL: string;
-  EMBEDDED_LENGTH_MAX?: number;
+  EMBEDDED_LENGTH_MAX: number;
   VERSION?: string;
 };
 
