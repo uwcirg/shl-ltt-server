@@ -1,6 +1,12 @@
-const defaultEnv = {
-  PUBLIC_URL: 'https://shl-server.inform.dev.cirg.uw.edu',
-  EMBEDDED_LENGTH_MAX: 10_000
+interface Config {
+  PUBLIC_URL: string;
+  EMBEDDED_LENGTH_MAX: number;
+  VERSION?: string;
+};
+
+const defaultEnv: Config = {
+  PUBLIC_URL: 'http://localhost:9000',
+  EMBEDDED_LENGTH_MAX: 10_000,
 };
 
 async function envOrDefault(variable: string, defaultValue: string | number) {

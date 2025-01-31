@@ -67,17 +67,22 @@ export const DbLinks = {
     return link;
   },
   updateConfig(linkId:string, config: types.HealthLinkConfig) {
-    db.query(`UPDATE shlink set config_passcode=:passcode, config_exp=:exp, session_id=:sessionId where id=:id`,
+    try{
+      db.query(`UPDATE shlink set config_passcode=:passcode, config_exp=:exp, session_id=:sessionId where id=:id`,
     {
       id: linkId,
       exp: config.exp,
       passcode: config.passcode,
       sessionId: config.sessionId
     });
+    }catch(e){
+      console.log(e);
+      return false;
+    }
     return true;
   },
-  deactivate(shl: types.HealthLink) {
-    db.query(`UPDATE shlink set active=false where id=?`, [shl.id]);
+  deactivate(shl: types.HealthLink, managementToken: string): boolean {
+    db.query(`UPDATE shlink set active=false where id=? and management_token=?`, [shl.id, managementToken]);
     return true;
   },
   reactivate(linkId: string, managementToken: string): boolean {
@@ -98,13 +103,17 @@ export const DbLinks = {
       active: Boolean(linkRow.active) as boolean,
       userId: linkRow.user_id as string,
       sessionId: linkRow.session_id as string,
-      created: linkRow.created as string,
+      created: linkRow.created as number,
       managementToken: linkRow.management_token as string,
       config: {
         exp: linkRow.config_exp as number,
         passcode: linkRow.config_passcode as string,
       },
     };
+  },
+  getTokenOwner(managementToken: string): string | undefined {
+    const linkRow = db.prepareQuery(`SELECT user_id from shlink where management_token=?`).oneEntry([managementToken]);
+    return linkRow.user_id as string;
   },
   getUserShl(userId: string): types.HealthLink | undefined {
     try {
@@ -117,7 +126,7 @@ export const DbLinks = {
         active: Boolean(linkRow.active) as boolean,
         userId: linkRow.user_id as string,
         sessionId: linkRow.session_id as string,
-        created: linkRow.created as string,
+        created: linkRow.created as number,
         managementToken: linkRow.management_token as string,
         config: {
           exp: linkRow.config_exp as number,
@@ -137,7 +146,7 @@ export const DbLinks = {
       active: Boolean(linkRow.active) as boolean,
       userId: linkRow.user_id as string,
       sessionId: linkRow.session_id as string,
-      created: linkRow.created as string,
+      created: linkRow.created as number,
       managementToken: linkRow.management_token as string,
       config: {
         exp: linkRow.config_exp as number,
@@ -182,7 +191,7 @@ export const DbLinks = {
     //   content: file.content,
     // });
 
-    return true;
+    return hashEncoded;
   },
   async deleteAllFiles(linkId: string) {
 
