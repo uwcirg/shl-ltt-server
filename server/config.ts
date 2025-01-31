@@ -1,7 +1,7 @@
 interface Config {
   PUBLIC_URL: string;
   EMBEDDED_LENGTH_MAX: number;
-  VERSION?: string;
+  APP_VERSION_STRING?: string;
 };
 
 const defaultEnv: Config = {
