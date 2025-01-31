@@ -4,6 +4,7 @@ const { Application, Router } = oak;
 const { oakCors } = cors;
 
 const app = new Application({ logErrors: false });
+app.proxy = true;
 app.use(oakCors());
 
 const appRouter = new Router()

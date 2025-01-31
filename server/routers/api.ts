@@ -36,7 +36,7 @@ function applyLogFallbacks(logMessage: types.LogMessageSimple, defaults: Partial
 
 function log(context: oak.Context, msg: types.LogMessageSimple, shl?: types.HealthLink) {  
   let logMessage: types.LogMessage = {
-    version: "2",
+    version: "3.0",
     severity: "info",
     action: msg.action,
     occurred: new Date().toISOString(),
