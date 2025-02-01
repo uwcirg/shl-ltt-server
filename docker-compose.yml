@@ -2,7 +2,10 @@
 version: "3.4"
 services:
   server:
-    build: ./server
+    build:
+      context: ./server
+      args:
+        APP_VERSION_STRING: ${APP_VERSION_STRING:-local}
     ports:
       # allow override of published port
       - "127.0.0.1:${EXTERNAL_PORT:-9000}:8000"

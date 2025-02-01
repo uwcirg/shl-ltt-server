@@ -50,7 +50,7 @@ function log(context: oak.Context, msg: types.LogMessageSimple, shl?: types.Heal
     source: {
       observer: env.PUBLIC_URL, // system url
       type: "shl-ltt-server", // system/project name
-      version: env.VERSION, // system version
+      version: env.APP_VERSION_STRING, // system version
     },
     entity: {
       detail: {
