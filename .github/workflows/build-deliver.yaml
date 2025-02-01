@@ -30,7 +30,7 @@ jobs:
 
           # create docker image tags to match git tags
           tag_names: true
-          buildargs: VITE_APP_VERSION_STRING
+          buildargs: APP_VERSION_STRING
 
           # build Dockerfile in server/ service directory
           workdir: server
