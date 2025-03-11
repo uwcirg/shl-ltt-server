@@ -82,6 +82,8 @@ export const shlApiRouter = new oak.Router()
     };
     const logMessage = applyLogFallbacks(content, defaults);
     log(context, logMessage);
+    context.response.status = 200;
+    return;
   })
   .post('/shl', async (context: oak.Context) => {
     const config: types.HealthLinkConfig = await context.request.body({ type: 'json' }).value;
