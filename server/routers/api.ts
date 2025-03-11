@@ -639,23 +639,47 @@ export const shlApiRouter = new oak.Router()
       context.response.headers.set('content-type', 'application/json');
       return;
     }
-    let files = db.DbLinks.getManifestFiles(shl.id);
-    const deleted = db.DbLinks.deleteAllFiles(shl.id);
-    log(context, {
-      action: "delete",
-      subject: db.DbLinks.getShlInternal(context.params.shlId)?.userId,
-      agent: {
-        who: db.DbLinks.getTokenOwner(managementToken)
-      },
-      entity: { detail: {
-        action: `Delete all files from shl '${shl.id}'`,
-        ...(files.reduce((r, f) => ({ ...r, [f.hash]: f.contentType }), {})),
-      }}
-    }, shl);
-    return (context.response.body = {
-      ...shl,
-      deleted,
-    });
+    try {
+      let files = db.DbLinks.getManifestFiles(shl.id);
+      let filesToDelete = files.reduce((r, f) => ({ ...r, [f.hash]: f.contentType }), {})
+      const deleted = db.DbLinks.deleteAllFiles(shl.id);
+      log(context, {
+        action: "delete",
+        subject: db.DbLinks.getShlInternal(context.params.shlId)?.userId,
+        agent: {
+          who: db.DbLinks.getTokenOwner(managementToken)
+        },
+        entity: { detail: {
+          action: `Delete all files from shl '${shl.id}'`,
+          ...filesToDelete,
+        }}
+      }, shl);
+      return (context.response.body = {
+        ...shl,
+        deleted: filesToDelete,
+      });
+    } catch (e) {
+      let status = 500;
+      let message = "Failed to delete files";
+      log(context, {
+        action: "delete",
+        severity: "error",
+        subject: db.DbLinks.getShlInternal(context.params.shlId)?.userId,
+        agent: {
+          who: db.DbLinks.getTokenOwner(managementToken)
+        },
+        entity: { detail: {
+          action: `Delete all files from shl '${context.params.shlId}'`,
+          shl: context.params.shlId,
+          error: JSON.stringify(e, Object.getOwnPropertyNames(e))
+        }},
+        outcome: `${status} ${message}`,
+      });
+      context.response.status = status;
+      context.response.body = { message: message }
+      context.response.headers.set('content-type', 'application/json');
+      return;
+    }
   })
   .delete('/shl/:shlId/file', async (context: oak.Context) => {
     const managementToken = await context.request.headers.get('authorization')?.split(/bearer /i)[1]!;

@@ -1,3 +1,4 @@
+import env from './config.ts';
 import { base64url, queryString, sqlite } from './deps.ts';
 import { clientConnectionListener } from './routers/api.ts';
 import * as types from './types.ts';
@@ -242,6 +243,7 @@ export const DbLinks = {
     return await true;
   },
   getManifestFiles(linkId: string, embeddedLengthMax?: number) {
+    embeddedLengthMax = Math.min(env.EMBEDDED_LENGTH_MAX, embeddedLengthMax ?? Infinity);
     const files = db.queryEntries<{ content_type: string; content_hash: string, content?: Uint8Array }>(
       `select
       content_type,
